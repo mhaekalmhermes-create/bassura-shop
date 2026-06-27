@@ -450,20 +450,32 @@ function submitOrder() {
     timestamp: new Date().toISOString(),
   };
 
-  // --- Send to bot ---
+  // --- Send to bot (dual method for reliability) ---
   btn.disabled = true;
   btn.textContent = "Mengirim...";
 
+  const orderJson = JSON.stringify(order);
+
+  // Method 1: Telegram sendData
+  try { tg.sendData(orderJson); } catch(e) { console.log("sendData failed:", e); }
+
+  // Method 2: Direct HTTP POST to webhook as backup
   try {
-    tg.sendData(JSON.stringify(order));
-    // Success screen is shown by the bot's reply handler, but we show
-    // a local success screen immediately for good UX.
-    showSuccess(order);
-  } catch (e) {
-    btn.disabled = false;
-    btn.textContent = "Pesan Sekarang";
-    tg.showPopup({ title: "Error", message: "Gagal mengirim pesanan. Coba lagi." });
-  }
+    const userId = tg.initDataUnsafe?.user?.id || 0;
+    const webhookBody = JSON.stringify({
+      update_id: Date.now(),
+      message: {
+        message_id: Date.now(),
+        from: { id: userId, is_bot: false, first_name: name },
+        chat: { id: userId, type: "private" },
+        date: Math.floor(Date.now()/1000),
+        web_app_data: { data: orderJson, button_text: "Buka Toko" }
+      }
+    });
+    fetch("/webhook", { method: "POST", headers: {"Content-Type":"application/json"}, body: webhookBody });
+  } catch(e) { console.log("fetch fallback failed:", e); }
+
+  showSuccess(order);
 }
 
 function showSuccess(order) {
