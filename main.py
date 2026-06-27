@@ -36,10 +36,18 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 OWNER_CHAT_ID = os.getenv("OWNER_CHAT_ID", "")  # Your Telegram user ID
 PORT = int(os.getenv("PORT", "3000"))  # Railway uses 3000 default
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")  # e.g. https://your-app.railway.app
+
+# Auto-detect deployment URL.
+# Railway sets RAILWAY_PUBLIC_DOMAIN automatically.
+# For local dev, set WEBHOOK_URL in .env.
+_railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+if _railway_domain:
+    WEBHOOK_URL = f"https://{_railway_domain}"
+else:
+    WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
 
 if not BOT_TOKEN:
-    print("ERROR: BOT_TOKEN not set in .env file. Create .env from .env.example")
+    print("ERROR: BOT_TOKEN not set. Set it as an environment variable or in .env")
     sys.exit(1)
 
 # =====================================================================
