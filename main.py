@@ -26,7 +26,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-OWNER_CHAT_ID = os.getenv("OWNER_CHAT_ID", "")
+OWNER_CHAT_ID = os.getenv("OWNER_CHAT_ID", "") or "6484749863"
 PORT = int(os.getenv("PORT", "3000"))
 
 _railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
@@ -34,6 +34,10 @@ if _railway_domain:
     WEBHOOK_URL = f"https://{_railway_domain}"
 else:
     WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
+
+# ---- Fallback values when env vars are not set ----
+if not BOT_TOKEN:
+    BOT_TOKEN = "8648539997:AAGdMAzaDS7sEejxEf0p2yAm6QPlmTK00mU"
 
 # =====================================================================
 # Menu
