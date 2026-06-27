@@ -99,14 +99,16 @@ def mark_delivered(order_id: int) -> bool:
                 json.dump(orders, f, ensure_ascii=False, indent=2)
             return True
     return False
-
 def format_order(order: dict) -> str:
+    """Format an order as a readable Telegram message for the owner."""
     lines = [f"🛎️ *Pesanan Baru #{order['order_id']}*"]
     lines.append(f"👤 *Nama:* {order['customer_name']}")
     lines.append(f"🏢 *Unit:* {order['unit']}")
     lines.append(f"📞 *Telp:* {order['phone']}")
     if order.get("notes"):
         lines.append(f"📝 *Catatan:* {order['notes']}")
+    if order.get("chat_id"):
+        lines.append(f"🆔 *Chat ID:* `{order['chat_id']}`")
     lines.append("")
     lines.append("*Pesanan:*")
     for item in order.get("items", []):
@@ -331,6 +333,7 @@ def api_order():
         "ok": True,
         "order_id": order_number,
         "total": order["total"],
+        "chat_id": customer_chat_id,
         "message": f"Pesanan #{order_number} diterima! Total: Rp {order['total']:,}"
     })
 
