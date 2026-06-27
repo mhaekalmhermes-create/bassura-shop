@@ -449,6 +449,7 @@ function submitOrder() {
     items: items,
     total: total,
     timestamp: new Date().toLocaleString("id-ID", {timeZone: "Asia/Jakarta"}),
+    chat_id: tg.initDataUnsafe?.user?.id || null,  // for sending confirmation
   };
 
   // --- Send order via simple API endpoint ---

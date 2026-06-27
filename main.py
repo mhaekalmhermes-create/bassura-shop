@@ -275,19 +275,41 @@ def api_order():
 
     order_number = save_order(order)
 
-    # Send owner notification via bot
+    # Send owner notification
     if application and OWNER_CHAT_ID and _bot_loop and _bot_loop.is_running():
         try:
-            async def notify():
+            async def notify_owner():
                 await application.bot.send_message(
                     chat_id=OWNER_CHAT_ID,
                     text=format_order(order),
                     parse_mode="Markdown"
                 )
-            future = asyncio.run_coroutine_threadsafe(notify(), _bot_loop)
+            future = asyncio.run_coroutine_threadsafe(notify_owner(), _bot_loop)
             future.result(timeout=10)
         except Exception as e:
-            print(f"Notify failed: {e}")
+            print(f"Owner notify failed: {e}")
+
+    # Send confirmation to customer
+    customer_chat_id = order.get("chat_id")
+    if customer_chat_id and application and _bot_loop and _bot_loop.is_running():
+        try:
+            customer_msg = (
+                f"✅ *Pesanan #{order_number} Diterima!*\n\n"
+                f"Hai {order['customer_name']}, pesanan kamu akan segera kami proses "
+                f"dan diantar ke unit *{order['unit']}*.\n\n"
+                f"Total: *Rp {order['total']:,}* (bayar di tempat)\n\n"
+                f"Terima kasih! 🍽️"
+            )
+            async def notify_customer():
+                await application.bot.send_message(
+                    chat_id=str(customer_chat_id),
+                    text=customer_msg,
+                    parse_mode="Markdown"
+                )
+            future2 = asyncio.run_coroutine_threadsafe(notify_customer(), _bot_loop)
+            future2.result(timeout=10)
+        except Exception as e:
+            print(f"Customer notify failed: {e}")
 
     return jsonify({
         "ok": True,
