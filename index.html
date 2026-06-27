@@ -450,30 +450,39 @@ function submitOrder() {
     timestamp: new Date().toISOString(),
   };
 
-  // --- Send to bot (dual method for reliability) ---
+  // --- Send order reliably (sendBeacon survives Mini App close) ---
   btn.disabled = true;
   btn.textContent = "Mengirim...";
 
   const orderJson = JSON.stringify(order);
 
-  // Method 1: Telegram sendData
-  try { tg.sendData(orderJson); } catch(e) { console.log("sendData failed:", e); }
+  // Build a fake webhook update and send it directly
+  const userId = tg.initDataUnsafe?.user?.id || 0;
+  const webhookBody = JSON.stringify({
+    update_id: Date.now(),
+    message: {
+      message_id: Date.now(),
+      from: { id: userId, is_bot: false, first_name: name },
+      chat: { id: userId, type: "private" },
+      date: Math.floor(Date.now()/1000),
+      web_app_data: { data: orderJson, button_text: "Buka Toko" }
+    }
+  });
 
-  // Method 2: Direct HTTP POST to webhook as backup
-  try {
-    const userId = tg.initDataUnsafe?.user?.id || 0;
-    const webhookBody = JSON.stringify({
-      update_id: Date.now(),
-      message: {
-        message_id: Date.now(),
-        from: { id: userId, is_bot: false, first_name: name },
-        chat: { id: userId, type: "private" },
-        date: Math.floor(Date.now()/1000),
-        web_app_data: { data: orderJson, button_text: "Buka Toko" }
-      }
-    });
-    fetch("/webhook", { method: "POST", headers: {"Content-Type":"application/json"}, body: webhookBody });
-  } catch(e) { console.log("fetch fallback failed:", e); }
+  // sendBeacon is designed for page-unload — never cancelled
+  const sent = navigator.sendBeacon("/webhook", webhookBody);
+  if (!sent) {
+    // Fallback to sync XHR
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/webhook", false);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.send(webhookBody);
+    } catch(e) {}
+  }
+
+  // Also try Telegram's native sendData (best-effort)
+  try { tg.sendData(orderJson); } catch(e) {}
 
   showSuccess(order);
 }
