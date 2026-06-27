@@ -297,6 +297,14 @@ def api_order():
     })
 
 
+@app.route("/<path:filename>")
+def serve_static(filename):
+    """Serve static files (images, etc.)."""
+    filepath = Path(__file__).parent / filename
+    if filepath.suffix.lower() in (".jpg", ".jpeg", ".png", ".gif") and filepath.exists():
+        return Response(filepath.read_bytes(), mimetype=f"image/{filepath.suffix[1:]}")
+    return "Not found", 404
+
 @app.route("/")
 def serve_miniapp():
     html_path = Path(__file__).parent / "index.html"
