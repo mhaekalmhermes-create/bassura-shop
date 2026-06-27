@@ -491,14 +491,25 @@ window.addEventListener("pageshow", () => {
 });
 
 // ---------- Load saved cart from Telegram CloudStorage ----------
+let cloudLoaded = false;
 try {
-  tg.CloudStorage.getItem("cart", (err, val) => {
-    if (val) {
-      try { cart = JSON.parse(val); } catch(e) { cart = {}; }
-    }
+  if (tg.CloudStorage && tg.CloudStorage.getItem) {
+    tg.CloudStorage.getItem("cart", (err, val) => {
+      if (!err && val) {
+        try { cart = JSON.parse(val); } catch(e) { cart = {}; }
+      }
+      cloudLoaded = true;
+      renderProducts();
+      updateCartBar();
+    });
+    // Fallback: if callback doesn't fire within 1s, render anyway
+    setTimeout(() => {
+      if (!cloudLoaded) { renderProducts(); updateCartBar(); }
+    }, 1000);
+  } else {
     renderProducts();
     updateCartBar();
-  });
+  }
 } catch(e) {
   renderProducts();
   updateCartBar();
