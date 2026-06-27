@@ -135,6 +135,22 @@ async def send_welcome(update: Update):
     ])
     await update.message.reply_text(WELCOME_TEXT, parse_mode="Markdown", reply_markup=keyboard)
 
+async def web_app_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Reply to Mini App sendData — confirmation only, no save."""
+    try:
+        data = update.message.web_app_data.data
+        order = json.loads(data)
+        customer_msg = (
+            f"✅ *Pesanan Diterima!*\n\n"
+            f"Hai {order.get('customer_name', '')}, pesanan kamu akan segera kami proses "
+            f"dan diantar ke unit *{order.get('unit', '')}*.\n\n"
+            f"Total: *Rp {order.get('total', 0):,}* (bayar di tempat)\n\n"
+            f"Terima kasih! 🍽️"
+        )
+        await update.message.reply_text(customer_msg, parse_mode="Markdown")
+    except Exception:
+        pass  # Silent — main order processing is in /api/order
+
 async def web_app_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         order = json.loads(update.message.web_app_data.data)
@@ -407,6 +423,8 @@ def init_bot():
         application.add_handler(CommandHandler("orders", orders_command))
         application.add_handler(CommandHandler("done", done_command))
         application.add_handler(CommandHandler("export", export_command))
+        # Reply to web_app_data (from tg.sendData) with confirmation — no duplicate save
+        application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_reply_handler))
         application.add_handler(MessageHandler(filters.TEXT, welcome_handler))
         print("✅ Handlers registered", flush=True)
 
