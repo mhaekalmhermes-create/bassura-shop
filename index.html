@@ -452,32 +452,34 @@ function submitOrder() {
     chat_id: tg.initDataUnsafe?.user?.id || null,  // for sending confirmation
   };
 
-  // --- Send order via simple API endpoint ---
+  // --- Send order ---
   btn.disabled = true;
   btn.textContent = "Mengirim...";
 
   try {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/order", false);  // synchronous — guaranteed delivery
+    xhr.open("POST", "/api/order", false);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.send(JSON.stringify(order));
 
     if (xhr.status === 200) {
       const resp = JSON.parse(xhr.responseText);
       if (resp.ok) {
+        // Also ping Telegram to establish chat connection
+        try { tg.sendData(JSON.stringify(order)); } catch(e) {}
         showSuccess(order);
         return;
       }
     }
-    // Error from server
+    // Error handling...
     try {
       const err = JSON.parse(xhr.responseText);
       tg.showPopup({ title: "Gagal", message: err.error || "Coba lagi." });
     } catch(e) {
-      tg.showPopup({ title: "Error", message: "Gagal terhubung. Coba lagi." });
+      tg.showPopup({ title: "Error", message: "Gagal terhubung." });
     }
   } catch(e) {
-    tg.showPopup({ title: "Error", message: "Gagal mengirim. Coba lagi." });
+    tg.showPopup({ title: "Error", message: "Gagal mengirim." });
   }
 
   btn.disabled = false;
