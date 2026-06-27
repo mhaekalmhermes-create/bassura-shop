@@ -447,7 +447,7 @@ function submitOrder() {
     notes: notes,
     items: items,
     total: total,
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toLocaleString("id-ID", {timeZone: "Asia/Jakarta"}),
   };
 
   // --- Send order via simple API endpoint ---
