@@ -9,6 +9,7 @@ MODIFY: Edit MENU dict to change prices/items. Edit WELCOME_TEXT for greeting.
 import asyncio
 import json
 import os
+import re
 import sys
 import threading
 import traceback
@@ -138,8 +139,8 @@ async def web_app_data_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     if not order.get("unit"): errors.append("Unit apartemen tidak boleh kosong.")
     if not order.get("items"): errors.append("Keranjang kosong.")
     if not order.get("phone"): errors.append("Nomor telepon tidak boleh kosong.")
-    if order.get("unit") and "bassura" not in order.get("unit", "").lower():
-        errors.append("Maaf, hanya melayani Bassura City Apartment.")
+    if order.get("unit") and not re.match(r"^[A-Z]\d+[A-Z]+$", order.get("unit", ""), re.IGNORECASE):
+        errors.append("Format unit tidak valid. Gunakan format Bassura City, contoh: B29CE.")
 
     if errors:
         await update.message.reply_text("❌ " + "\n".join(errors), parse_mode="Markdown")

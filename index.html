@@ -278,8 +278,8 @@
 
     <div class="form-group">
       <label>Nomor Unit Apartemen</label>
-      <input type="text" id="custUnit" placeholder="contoh: Tower A, Lantai 12, #05">
-      <div class="validation-msg" id="unitError">⚠️ Maaf, saat ini hanya melayani area Bassura City Apartment.</div>
+      <input type="text" id="custUnit" placeholder="contoh: B29CE (Tower B, Lt 29, Unit CE)">
+      <div class="validation-msg" id="unitError">⚠️ Format unit tidak valid. Gunakan format Bassura City, contoh: B29CE.</div>
     </div>
 
     <div class="form-group">
@@ -422,8 +422,8 @@ function submitOrder() {
     tg.showPopup({ title: "Oops", message: "Nomor telepon belum diisi." });
     return;
   }
-  // Unit must mention Bassura (case-insensitive)
-  if (!/bassura/i.test(unit)) {
+  // Unit must match Bassura City format: e.g. B29CE (Tower, Floor, Unit)
+  if (!/^[A-Z]\d+[A-Z]+$/i.test(unit)) {
     document.getElementById("unitError").classList.add("show");
     return;
   }
