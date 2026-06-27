@@ -220,18 +220,27 @@ def serve_miniapp():
 def health():
     return jsonify({"status": "ok"})
 
+# Shared event loop for bot operations
+_bot_loop = None
+
 @app.route("/webhook", methods=["POST"])
-async def webhook():
-    global application
+def webhook():
+    global application, _bot_loop
     if application is None:
         return jsonify({"ok": False, "error": "bot not ready"}), 503
     try:
         data = request.get_json(force=True)
         if data:
             update = Update.de_json(data, application.bot)
-            await application.process_update(update)
+            if _bot_loop and _bot_loop.is_running():
+                future = asyncio.run_coroutine_threadsafe(
+                    application.process_update(update), _bot_loop
+                )
+                future.result(timeout=20)
+            else:
+                asyncio.run(application.process_update(update))
     except Exception as e:
-        print(f"Webhook error: {e}")
+        print(f"Webhook error: {e}", flush=True)
         return jsonify({"ok": False, "error": str(e)}), 500
     return jsonify({"ok": True})
 
@@ -239,7 +248,7 @@ async def webhook():
 # Bot initializer (runs in background after Flask starts)
 # =====================================================================
 def init_bot():
-    global application
+    global application, _bot_loop
     print("🤖 Initializing bot...", flush=True)
 
     if not BOT_TOKEN:
@@ -255,6 +264,10 @@ def init_bot():
         application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data_handler))
         print("✅ Handlers registered", flush=True)
 
+        # Create a persistent event loop for the bot
+        _bot_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_bot_loop)
+
         if WEBHOOK_URL:
             async def setup():
                 await application.bot.set_webhook(
@@ -263,10 +276,11 @@ def init_bot():
                 )
                 await application.initialize()
                 await application.start()
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(setup())
+            _bot_loop.run_until_complete(setup())
             print(f"✅ Webhook set: {WEBHOOK_URL}/webhook", flush=True)
+
+        # Keep the loop running for future webhook calls
+        threading.Thread(target=_bot_loop.run_forever, daemon=True).start()
 
     except Exception as e:
         print(f"❌ Bot init failed: {e}", flush=True)
