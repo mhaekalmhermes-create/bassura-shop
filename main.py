@@ -218,7 +218,13 @@ def serve_miniapp():
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok"})
+    global application
+    return jsonify({
+        "status": "ok",
+        "bot_ready": application is not None,
+        "webhook_url": WEBHOOK_URL,
+        "has_token": bool(BOT_TOKEN)
+    })
 
 # Shared event loop for bot operations
 _bot_loop = None
