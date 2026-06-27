@@ -450,41 +450,36 @@ function submitOrder() {
     timestamp: new Date().toISOString(),
   };
 
-  // --- Send order reliably (sendBeacon survives Mini App close) ---
+  // --- Send order via simple API endpoint ---
   btn.disabled = true;
   btn.textContent = "Mengirim...";
 
-  const orderJson = JSON.stringify(order);
+  try {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/order", false);  // synchronous — guaranteed delivery
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send(JSON.stringify(order));
 
-  // Build a fake webhook update and send it directly
-  const userId = tg.initDataUnsafe?.user?.id || 0;
-  const webhookBody = JSON.stringify({
-    update_id: Date.now(),
-    message: {
-      message_id: Date.now(),
-      from: { id: userId, is_bot: false, first_name: name },
-      chat: { id: userId, type: "private" },
-      date: Math.floor(Date.now()/1000),
-      web_app_data: { data: orderJson, button_text: "Buka Toko" }
+    if (xhr.status === 200) {
+      const resp = JSON.parse(xhr.responseText);
+      if (resp.ok) {
+        showSuccess(order);
+        return;
+      }
     }
-  });
-
-  // sendBeacon is designed for page-unload — never cancelled
-  const sent = navigator.sendBeacon("/webhook", webhookBody);
-  if (!sent) {
-    // Fallback to sync XHR
+    // Error from server
     try {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", "/webhook", false);
-      xhr.setRequestHeader("Content-Type", "application/json");
-      xhr.send(webhookBody);
-    } catch(e) {}
+      const err = JSON.parse(xhr.responseText);
+      tg.showPopup({ title: "Gagal", message: err.error || "Coba lagi." });
+    } catch(e) {
+      tg.showPopup({ title: "Error", message: "Gagal terhubung. Coba lagi." });
+    }
+  } catch(e) {
+    tg.showPopup({ title: "Error", message: "Gagal mengirim. Coba lagi." });
   }
 
-  // Also try Telegram's native sendData (best-effort)
-  try { tg.sendData(orderJson); } catch(e) {}
-
-  showSuccess(order);
+  btn.disabled = false;
+  btn.textContent = "Pesan Sekarang";
 }
 
 function showSuccess(order) {

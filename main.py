@@ -214,6 +214,50 @@ async def done_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 app = Flask(__name__)
 application = None
 
+@app.route("/api/order", methods=["POST"])
+def api_order():
+    """Simple order endpoint — bypasses Telegram webhook entirely."""
+    try:
+        order = request.get_json(force=True)
+    except Exception:
+        return jsonify({"ok": False, "error": "Invalid JSON"}), 400
+
+    # Validate
+    errors = []
+    if not order.get("customer_name"): errors.append("Nama wajib diisi")
+    if not order.get("unit"): errors.append("Unit wajib diisi")
+    elif not re.match(r"^[A-Z]\d+[A-Z]+$", order["unit"], re.IGNORECASE):
+        errors.append("Format unit: contoh B29CE")
+    if not order.get("phone"): errors.append("Telepon wajib diisi")
+    if not order.get("items"): errors.append("Keranjang kosong")
+
+    if errors:
+        return jsonify({"ok": False, "error": "\n".join(errors)}), 400
+
+    order_number = save_order(order)
+
+    # Send owner notification via bot
+    if application and OWNER_CHAT_ID and _bot_loop and _bot_loop.is_running():
+        try:
+            async def notify():
+                await application.bot.send_message(
+                    chat_id=OWNER_CHAT_ID,
+                    text=format_order(order),
+                    parse_mode="Markdown"
+                )
+            future = asyncio.run_coroutine_threadsafe(notify(), _bot_loop)
+            future.result(timeout=10)
+        except Exception as e:
+            print(f"Notify failed: {e}")
+
+    return jsonify({
+        "ok": True,
+        "order_id": order_number,
+        "total": order["total"],
+        "message": f"Pesanan #{order_number} diterima! Total: Rp {order['total']:,}"
+    })
+
+
 @app.route("/")
 def serve_miniapp():
     html_path = Path(__file__).parent / "index.html"
