@@ -223,15 +223,33 @@ def serve_miniapp():
 
 @app.route("/health")
 def health():
-    global application
+    global application, _bot_loop
     env_keys = sorted(k for k in os.environ.keys())
+    # Test if bot can send messages
+    can_send = False
+    send_error = ""
+    if application and _bot_loop and _bot_loop.is_running():
+        try:
+            async def test():
+                me = await application.bot.get_me()
+                return me.username
+            future = asyncio.run_coroutine_threadsafe(test(), _bot_loop)
+            bot_user = future.result(timeout=5)
+            can_send = True
+        except Exception as e:
+            send_error = str(e)
+            bot_user = None
+    else:
+        bot_user = None
     return jsonify({
         "status": "ok",
         "bot_ready": application is not None,
+        "bot_username": bot_user,
+        "can_send": can_send,
+        "send_error": send_error,
         "webhook_url": WEBHOOK_URL,
-        "bot_token_len": len(os.getenv("BOT_TOKEN", "")),
         "owner_id": OWNER_CHAT_ID,
-        "env_keys": env_keys
+        "bot_token_len": len(BOT_TOKEN),
     })
 
 # Shared event loop for bot operations
