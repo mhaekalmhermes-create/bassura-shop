@@ -407,7 +407,6 @@ def init_bot():
         application.add_handler(CommandHandler("orders", orders_command))
         application.add_handler(CommandHandler("done", done_command))
         application.add_handler(CommandHandler("export", export_command))
-        application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data_handler))
         application.add_handler(MessageHandler(filters.TEXT, welcome_handler))
         print("✅ Handlers registered", flush=True)
 
