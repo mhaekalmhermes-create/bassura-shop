@@ -132,8 +132,11 @@ async def send_welcome(update: Update):
     if not WEBHOOK_URL:
         await update.message.reply_text("⚠️ Toko belum siap. Mohon tunggu sebentar.")
         return
+    # Pass user's Telegram ID to Mini App via URL
+    user_id = update.effective_user.id
+    webapp_url = f"{WEBHOOK_URL}?uid={user_id}"
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(text="🛒 Buka Toko", web_app=WebAppInfo(url=WEBHOOK_URL))]
+        [InlineKeyboardButton(text="🛒 Buka Toko", web_app=WebAppInfo(url=webapp_url))]
     ])
     await update.message.reply_text(WELCOME_TEXT, parse_mode="Markdown", reply_markup=keyboard)
 

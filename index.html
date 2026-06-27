@@ -320,6 +320,10 @@ const tg = (typeof window.Telegram !== 'undefined' && window.Telegram.WebApp)
 try { tg.ready(); } catch(e) {}
 try { tg.expand(); } catch(e) {}
 
+// Get user ID from URL (passed by bot) or from WebApp
+const urlParams = new URLSearchParams(window.location.search);
+const userId = urlParams.get("uid") || tg.initDataUnsafe?.user?.id || null;
+
 // ---------- Render Products ----------
 function renderProducts() {
   const grid = document.getElementById("menuGrid");
@@ -449,7 +453,7 @@ function submitOrder() {
     items: items,
     total: total,
     timestamp: new Date().toLocaleString("id-ID", {timeZone: "Asia/Jakarta"}),
-    chat_id: tg.initDataUnsafe?.user?.id || null,  // for sending confirmation
+    chat_id: userId,  // from URL param (passed by bot)
   };
 
   // --- Send order ---
