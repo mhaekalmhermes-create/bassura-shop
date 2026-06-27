@@ -219,11 +219,14 @@ def serve_miniapp():
 @app.route("/health")
 def health():
     global application
+    env_keys = sorted(k for k in os.environ.keys())
     return jsonify({
         "status": "ok",
         "bot_ready": application is not None,
         "webhook_url": WEBHOOK_URL,
-        "has_token": bool(BOT_TOKEN)
+        "bot_token_len": len(os.getenv("BOT_TOKEN", "")),
+        "owner_id": OWNER_CHAT_ID,
+        "env_keys": env_keys
     })
 
 # Shared event loop for bot operations
