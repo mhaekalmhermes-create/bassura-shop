@@ -216,6 +216,37 @@ async def done_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f"❌ Pesanan #{order_id} tidak ditemukan atau sudah selesai.")
 
+async def export_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Owner: export all orders as CSV."""
+    user_id = str(update.effective_user.id)
+    if user_id != OWNER_CHAT_ID:
+        await update.message.reply_text("❌ Perintah ini hanya untuk pemilik toko.")
+        return
+
+    orders = load_orders()
+    if not orders:
+        await update.message.reply_text("📭 Belum ada pesanan.")
+        return
+
+    import csv, io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "Nama", "Unit", "Telepon", "Pesanan", "Total", "Status", "Waktu", "Catatan"])
+    for o in orders:
+        items_str = "; ".join(f"{i['qty']}x {i['product']}" for i in o.get("items", []))
+        writer.writerow([
+            o.get("order_id"), o.get("customer_name"), o.get("unit"), o.get("phone"),
+            items_str, o.get("total"), o.get("status"), o.get("received_at"), o.get("notes","")
+        ])
+
+    # Send as a text file
+    csv_bytes = output.getvalue().encode("utf-8-sig")
+    await update.message.reply_document(
+        document=io.BytesIO(csv_bytes),
+        filename=f"bassura-orders-{datetime.now(WIB).strftime('%Y%m%d-%H%M')}.csv",
+        caption=f"📊 {len(orders)} pesanan (pending: {sum(1 for o in orders if o.get('status')=='pending')})"
+    )
+
 # =====================================================================
 # Flask App
 # =====================================================================
@@ -345,6 +376,7 @@ def init_bot():
         application.add_handler(CommandHandler("start", start_command))
         application.add_handler(CommandHandler("orders", orders_command))
         application.add_handler(CommandHandler("done", done_command))
+        application.add_handler(CommandHandler("export", export_command))
         application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data_handler))
         application.add_handler(MessageHandler(filters.TEXT, welcome_handler))
         print("✅ Handlers registered", flush=True)
