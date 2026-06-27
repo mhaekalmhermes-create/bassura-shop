@@ -119,12 +119,17 @@ def format_order(order: dict) -> str:
 # Telegram Bot Handlers
 # =====================================================================
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not WEBHOOK_URL:
-        await update.message.reply_text(
-            "⚠️ Toko belum siap. Mohon tunggu sebentar.", parse_mode="Markdown"
-        )
-        return
+    """Send welcome with shop button."""
+    await send_welcome(update)
 
+async def welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Respond to any text message with the shop button."""
+    await send_welcome(update)
+
+async def send_welcome(update: Update):
+    if not WEBHOOK_URL:
+        await update.message.reply_text("⚠️ Toko belum siap. Mohon tunggu sebentar.")
+        return
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(text="🛒 Buka Toko", web_app=WebAppInfo(url=WEBHOOK_URL))]
     ])
@@ -341,6 +346,7 @@ def init_bot():
         application.add_handler(CommandHandler("orders", orders_command))
         application.add_handler(CommandHandler("done", done_command))
         application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data_handler))
+        application.add_handler(MessageHandler(filters.TEXT, welcome_handler))
         print("✅ Handlers registered", flush=True)
 
         # Create a persistent event loop for the bot
