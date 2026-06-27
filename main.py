@@ -13,8 +13,11 @@ import re
 import sys
 import threading
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+# Western Indonesia Time (WIB) = UTC+7
+WIB = timezone(timedelta(hours=7))
 
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, Response
@@ -80,7 +83,7 @@ def save_order(order_data: dict) -> int:
     order_number = len(orders) + 1
     order_data["order_id"] = order_number
     order_data["status"] = "pending"
-    order_data["received_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    order_data["received_at"] = datetime.now(WIB).strftime("%Y-%m-%d %H:%M:%S")
     orders.append(order_data)
     with open(ORDERS_FILE, "w", encoding="utf-8") as f:
         json.dump(orders, f, ensure_ascii=False, indent=2)
@@ -91,7 +94,7 @@ def mark_delivered(order_id: int) -> bool:
     for o in orders:
         if o.get("order_id") == order_id and o.get("status") == "pending":
             o["status"] = "delivered"
-            o["delivered_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            o["delivered_at"] = datetime.now(WIB).strftime("%Y-%m-%d %H:%M:%S")
             with open(ORDERS_FILE, "w", encoding="utf-8") as f:
                 json.dump(orders, f, ensure_ascii=False, indent=2)
             return True
