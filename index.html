@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<!--
+  Bassura City Food Shop — Telegram Mini App
+  A simple online shop with 4 menu items.
+  Loads inside Telegram. No external dependencies.
+-->
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bassura Food Shop</title>
+<style>
+  /* ---------- Reset & Base ---------- */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--tg-theme-bg-color, #1a1a2e);
+    color: var(--tg-theme-text-color, #eee);
+    padding: 16px;
+    padding-bottom: 100px;
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* ---------- Header ---------- */
+  .header {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--tg-theme-text-color, #eee);
+  }
+  .header p {
+    font-size: 13px;
+    color: var(--tg-theme-hint-color, #999);
+    margin-top: 4px;
+  }
+
+  /* ---------- Product Cards ---------- */
+  .menu { display: flex; flex-direction: column; gap: 12px; }
+
+  .product {
+    background: var(--tg-theme-secondary-bg-color, #16213e);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .product-emoji {
+    font-size: 42px;
+    width: 56px; height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--tg-theme-bg-color, #1a1a2e);
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+  .product-info { flex: 1; min-width: 0; }
+  .product-name { font-size: 16px; font-weight: 600; }
+  .product-price { font-size: 14px; color: var(--tg-theme-hint-color, #aaa); }
+
+  .qty-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .qty-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: none;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--tg-theme-button-color, #0f3460);
+    color: var(--tg-theme-button-text-color, #fff);
+    transition: opacity 0.1s;
+  }
+  .qty-btn:active { opacity: 0.7; }
+  .qty-num {
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 24px;
+    text-align: center;
+  }
+
+  /* ---------- Cart Bar (bottom) ---------- */
+  .cart-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--tg-theme-secondary-bg-color, #16213e);
+    border-top: 1px solid var(--tg-theme-hint-color, #333);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 480px;
+    margin: 0 auto;
+    z-index: 10;
+  }
+  .cart-summary { font-size: 14px; }
+  .cart-total { font-weight: 700; }
+  .cart-count { color: var(--tg-theme-hint-color, #999); font-size: 12px; }
+
+  .checkout-btn {
+    padding: 12px 28px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--tg-theme-button-color, #0f3460);
+    color: var(--tg-theme-button-text-color, #fff);
+    transition: opacity 0.15s;
+  }
+  .checkout-btn:active { opacity: 0.7; }
+  .checkout-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ---------- Checkout Modal ---------- */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 20;
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--tg-theme-bg-color, #1a1a2e);
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%;
+    max-width: 420px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal h2 {
+    font-size: 20px;
+    margin-bottom: 6px;
+    color: var(--tg-theme-text-color, #eee);
+  }
+  .modal .order-summary {
+    font-size: 13px;
+    color: var(--tg-theme-hint-color, #aaa);
+    margin-bottom: 16px;
+  }
+
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: var(--tg-theme-text-color, #eee);
+  }
+  .form-group input, .form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--tg-theme-hint-color, #444);
+    background: var(--tg-theme-secondary-bg-color, #16213e);
+    color: var(--tg-theme-text-color, #eee);
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-group input:focus, .form-group textarea:focus {
+    border-color: var(--tg-theme-button-color, #0f3460);
+  }
+  .form-group textarea { resize: vertical; min-height: 60px; }
+
+  .validation-msg {
+    font-size: 12px;
+    color: #ff6b6b;
+    margin-top: 3px;
+    display: none;
+  }
+  .validation-msg.show { display: block; }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .modal-actions button {
+    flex: 1;
+    padding: 13px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .modal-actions button:active { opacity: 0.7; }
+  .btn-cancel {
+    background: var(--tg-theme-secondary-bg-color, #16213e);
+    color: var(--tg-theme-text-color, #eee);
+  }
+  .btn-submit {
+    background: var(--tg-theme-button-color, #0f3460);
+    color: var(--tg-theme-button-text-color, #fff);
+  }
+  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ---------- Success Screen ---------- */
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .success-screen.show { display: block; }
+  .success-icon {
+    font-size: 56px;
+    margin-bottom: 12px;
+  }
+  .success-screen h2 {
+    font-size: 20px;
+    margin-bottom: 6px;
+    color: var(--tg-theme-text-color, #eee);
+  }
+  .success-screen p {
+    font-size: 14px;
+    color: var(--tg-theme-hint-color, #aaa);
+    margin-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== SHOP VIEW ========== -->
+<div id="shopView">
+  <div class="header">
+    <h1>🍽️ Bassura Food Shop</h1>
+    <p>Bassura City Apartment • Cash on Delivery</p>
+  </div>
+
+  <div class="menu" id="menuGrid"></div>
+</div>
+
+<!-- ========== SUCCESS VIEW ========== -->
+<div class="success-screen" id="successScreen">
+  <div class="success-icon">✅</div>
+  <h2>Pesanan Diterima!</h2>
+  <p id="successMsg">Pesanan kamu akan diantar ke unit kamu.</p>
+  <p style="font-size:13px;color:var(--tg-theme-hint-color,#999)">Kami akan menghubungi kamu segera.</p>
+</div>
+
+<!-- ========== CART BAR ========== -->
+<div class="cart-bar" id="cartBar">
+  <div>
+    <div class="cart-summary">Total: <span class="cart-total" id="cartTotal">Rp 0</span></div>
+    <div class="cart-count" id="cartCount">0 item</div>
+  </div>
+  <button class="checkout-btn" id="checkoutBtn" disabled>Pesan</button>
+</div>
+
+<!-- ========== CHECKOUT MODAL ========== -->
+<div class="modal-overlay" id="checkoutModal">
+  <div class="modal">
+    <h2>📋 Checkout</h2>
+    <div class="order-summary" id="orderSummary"></div>
+
+    <div class="form-group">
+      <label>Nama</label>
+      <input type="text" id="custName" placeholder="Nama kamu" autocomplete="name">
+    </div>
+
+    <div class="form-group">
+      <label>Nomor Unit Apartemen</label>
+      <input type="text" id="custUnit" placeholder="contoh: Tower A, Lantai 12, #05">
+      <div class="validation-msg" id="unitError">⚠️ Maaf, saat ini hanya melayani area Bassura City Apartment.</div>
+    </div>
+
+    <div class="form-group">
+      <label>Nomor WhatsApp/Telepon</label>
+      <input type="tel" id="custPhone" placeholder="0812-xxxx-xxxx" autocomplete="tel">
+    </div>
+
+    <div class="form-group">
+      <label>Catatan (opsional)</label>
+      <textarea id="custNotes" placeholder="Misal: kurang pedas, tambah gula..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCancel">Batal</button>
+      <button class="btn-submit" id="btnSubmit">Pesan Sekarang</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SCRIPTS ========== -->
+<script>
+// ---------- Product Data ----------
+// To change prices or names, edit this array and the emoji below.
+const PRODUCTS = [
+  { id: "cappuccino",  name: "Cappuccino",    price: 20000, emoji: "☕" },
+  { id: "cafe-latte",  name: "Cafe Latte",    price: 20000, emoji: "🫗" },
+  { id: "croissant",   name: "Croissant",     price: 20000, emoji: "🥐" },
+  { id: "fried-noodle",name: "Fried Noodles", price: 20000, emoji: "🍜" },
+];
+
+// ---------- Cart ----------
+// cart: { "cappuccino": 2, "croissant": 1, ... }
+let cart = {};
+
+// ---------- Init Telegram WebApp ----------
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+
+// ---------- Render Products ----------
+function renderProducts() {
+  const grid = document.getElementById("menuGrid");
+  grid.innerHTML = "";
+
+  PRODUCTS.forEach(p => {
+    const qty = cart[p.id] || 0;
+    const div = document.createElement("div");
+    div.className = "product";
+    div.innerHTML = `
+      <div class="product-emoji">${p.emoji}</div>
+      <div class="product-info">
+        <div class="product-name">${p.name}</div>
+        <div class="product-price">Rp ${p.price.toLocaleString("id-ID")}</div>
+      </div>
+      <div class="qty-controls">
+        <button class="qty-btn" data-action="minus" data-id="${p.id}">−</button>
+        <span class="qty-num">${qty}</span>
+        <button class="qty-btn" data-action="plus" data-id="${p.id}">+</button>
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+
+  // Re-bind events
+  grid.querySelectorAll(".qty-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      if (btn.dataset.action === "plus") {
+        cart[id] = (cart[id] || 0) + 1;
+      } else {
+        cart[id] = Math.max(0, (cart[id] || 0) - 1);
+        if (cart[id] === 0) delete cart[id];
+      }
+      renderProducts();
+      updateCartBar();
+    });
+  });
+}
+
+// ---------- Update Cart Bar ----------
+function updateCartBar() {
+  let total = 0;
+  let count = 0;
+  for (const id in cart) {
+    const p = PRODUCTS.find(x => x.id === id);
+    if (p) { total += p.price * cart[id]; count += cart[id]; }
+  }
+  document.getElementById("cartTotal").textContent = "Rp " + total.toLocaleString("id-ID");
+  document.getElementById("cartCount").textContent = count + " item";
+  document.getElementById("checkoutBtn").disabled = (count === 0);
+}
+
+// ---------- Checkout Modal ----------
+document.getElementById("checkoutBtn").addEventListener("click", openCheckout);
+document.getElementById("btnCancel").addEventListener("click", closeCheckout);
+document.getElementById("checkoutModal").addEventListener("click", function(e) {
+  if (e.target === this) closeCheckout();
+});
+
+function openCheckout() {
+  // Build order summary
+  let lines = [];
+  let total = 0;
+  for (const id in cart) {
+    const p = PRODUCTS.find(x => x.id === id);
+    if (p) {
+      lines.push(`${p.emoji} ${p.name} x${cart[id]} = Rp ${(p.price * cart[id]).toLocaleString("id-ID")}`);
+      total += p.price * cart[id];
+    }
+  }
+  document.getElementById("orderSummary").innerHTML = lines.join("<br>") + `<br><b>Total: Rp ${total.toLocaleString("id-ID")}</b>`;
+  document.getElementById("checkoutModal").classList.add("open");
+  document.getElementById("unitError").classList.remove("show");
+}
+
+function closeCheckout() {
+  document.getElementById("checkoutModal").classList.remove("open");
+}
+
+// ---------- Submit Order ----------
+document.getElementById("btnSubmit").addEventListener("click", submitOrder);
+
+function submitOrder() {
+  const btn = document.getElementById("btnSubmit");
+  const name = document.getElementById("custName").value.trim();
+  const unit = document.getElementById("custUnit").value.trim();
+  const phone = document.getElementById("custPhone").value.trim();
+  const notes = document.getElementById("custNotes").value.trim();
+
+  // --- Validation ---
+  // Name required
+  if (!name) {
+    tg.showPopup({ title: "Oops", message: "Nama belum diisi." });
+    return;
+  }
+  // Phone required
+  if (!phone) {
+    tg.showPopup({ title: "Oops", message: "Nomor telepon belum diisi." });
+    return;
+  }
+  // Unit must mention Bassura (case-insensitive)
+  if (!/bassura/i.test(unit)) {
+    document.getElementById("unitError").classList.add("show");
+    return;
+  }
+  document.getElementById("unitError").classList.remove("show");
+
+  // --- Build order data ---
+  let items = [];
+  let total = 0;
+  for (const id in cart) {
+    const p = PRODUCTS.find(x => x.id === id);
+    if (p) {
+      items.push({ product: p.name, qty: cart[id], subtotal: p.price * cart[id] });
+      total += p.price * cart[id];
+    }
+  }
+
+  const order = {
+    customer_name: name,
+    unit: unit,
+    phone: phone,
+    notes: notes,
+    items: items,
+    total: total,
+    timestamp: new Date().toISOString(),
+  };
+
+  // --- Send to bot ---
+  btn.disabled = true;
+  btn.textContent = "Mengirim...";
+
+  try {
+    tg.sendData(JSON.stringify(order));
+    // Success screen is shown by the bot's reply handler, but we show
+    // a local success screen immediately for good UX.
+    showSuccess(order);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "Pesan Sekarang";
+    tg.showPopup({ title: "Error", message: "Gagal mengirim pesanan. Coba lagi." });
+  }
+}
+
+function showSuccess(order) {
+  document.getElementById("checkoutModal").classList.remove("open");
+  document.getElementById("shopView").style.display = "none";
+  document.getElementById("cartBar").style.display = "none";
+  document.getElementById("successScreen").classList.add("show");
+  document.getElementById("successMsg").textContent =
+    `Pesanan kamu (${order.items.length} item, Rp ${order.total.toLocaleString("id-ID")}) akan diantar ke unit kamu.`;
+
+  // Reset cart
+  cart = {};
+  renderProducts();
+  updateCartBar();
+}
+
+// ---------- Back to shop (from success) ----------
+// If user presses Back, refresh
+window.addEventListener("pageshow", () => {
+  document.getElementById("shopView").style.display = "block";
+  document.getElementById("cartBar").style.display = "flex";
+  document.getElementById("successScreen").classList.remove("show");
+});
+
+// ---------- Load saved cart from Telegram CloudStorage ----------
+try {
+  tg.CloudStorage.getItem("cart", (err, val) => {
+    if (val) {
+      try { cart = JSON.parse(val); } catch(e) { cart = {}; }
+    }
+    renderProducts();
+    updateCartBar();
+  });
+} catch(e) {
+  renderProducts();
+  updateCartBar();
+}
+
+// Save cart to CloudStorage on changes
+const originalRenderProducts = renderProducts;
+renderProducts = function() {
+  originalRenderProducts();
+  try { tg.CloudStorage.setItem("cart", JSON.stringify(cart)); } catch(e) {}
+};
+</script>
+
+</body>
+</html>
