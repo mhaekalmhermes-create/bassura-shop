@@ -319,25 +319,34 @@ def main():
         print(f"   URL:  {WEBHOOK_URL}")
         print(f"   Webhook: {WEBHOOK_URL}/webhook")
 
-        # Set webhook on Telegram servers
-        async def set_webhook():
-            await application.bot.set_webhook(
-                url=f"{WEBHOOK_URL}/webhook",
-                allowed_updates=["message", "callback_query"]
-            )
-            await application.initialize()
-            await application.start()
-            print("✅ Webhook set and bot started.")
+        # Set webhook on Telegram servers (don't crash if it fails)
+        async def setup_bot():
+            try:
+                await application.bot.set_webhook(
+                    url=f"{WEBHOOK_URL}/webhook",
+                    allowed_updates=["message", "callback_query"]
+                )
+                await application.initialize()
+                await application.start()
+                print("✅ Webhook set and bot started.")
+            except Exception as e:
+                print(f"⚠️ Webhook setup failed: {e}")
+                print("   App will still serve Mini App. Check BOT_TOKEN.")
 
-        # Run the async setup in the same event loop
-        if threading.current_thread() is threading.main_thread():
-            # In Railway, the gunicorn process runs Flask sync.
-            # We need to initialize the bot async, then serve.
+        try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            loop.run_until_complete(set_webhook())
+            loop.run_until_complete(setup_bot())
+        except Exception as e:
+            print(f"⚠️ Bot init failed: {e}")
 
-        # Run Flask (gunicorn will import 'app' directly on Railway)
+        # Health check endpoint
+        @app.route("/health")
+        def health():
+            return jsonify({"status": "ok", "url": WEBHOOK_URL})
+
+        # Start Flask
+        print(f"🚀 Starting server on port {PORT}...")
         app.run(host="0.0.0.0", port=PORT, debug=False)
 
     else:
